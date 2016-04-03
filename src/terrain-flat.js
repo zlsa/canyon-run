@@ -133,6 +133,7 @@ class Tile extends events.Events {
     geometry.computeVertexNormals();
 
     geometry.faceVertexUvs[0] = [];
+    
     var faces = geometry.faces;
     
     s = 1 / 3000;

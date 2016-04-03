@@ -15,7 +15,8 @@ class Scene {
     this.scene.fog = this.fog;
     
     this.renderer = new T.WebGLRenderer({
-      antialias: true
+      antialias: true,
+      logarithmicDepthBuffer: true
     });
 
     this.renderer.sortObjects = false;

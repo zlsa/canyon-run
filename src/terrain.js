@@ -28,6 +28,11 @@ class Tile extends events.Events {
     
     this.distance = 0;
 
+    this.temp = {
+      v3a: new T.Vector3(),
+      v3b: new T.Vector3()
+    };
+
     total += 1;
   }
 
@@ -36,7 +41,10 @@ class Tile extends events.Events {
   }
 
   updateDistance() {
-    this.distance = this.viewer.distanceTo(this.position);
+    this.temp.v3a.copy(this.viewer);
+    this.temp.v3b.copy(this.position);
+    
+    this.distance = this.temp.v3a.distanceTo(this.temp.v3b);
   }
 
   update() {
@@ -56,12 +64,14 @@ class NestTile extends Tile {
 
     this.level = parent.level + 1;
 
-    this.subdiv = 8;
+    this.subdiv = 14;
 
     this.children = [];
     
     this.is_subdivided = false;
     this.use_subdivided = false;
+
+    this.subdivide_fade = 0;
 
     this.ready = false;
   }
@@ -76,14 +86,20 @@ class NestTile extends Tile {
     }
     
     this.use_subdivided = status;
-    this.mesh.visible = !status;
 
     if(status == false) {
-      for(i=0; i<this.children.length; i++) {
-        this.children[i].mesh.visible = false;
-      }
+      this.setVisible(false);
     }
     
+    this.mesh.visible = !status;
+    
+  }
+
+  setVisible(visible) {
+    this.mesh.visible = visible;
+    for(var i=0; i<this.children.length; i++) {
+      this.children[i].setVisible(visible);
+    }
   }
   
   subdivide() {
@@ -118,102 +134,118 @@ class NestTile extends Tile {
 
   createMesh() {
 
-    this.ready = true;
+    var extra = 2;
 
-    var color = 0xff0000;
+    var division_size = (this.size / this.subdiv);
     
-    if(this.level == 1)
-      color = 0xffff00;
-    else if(this.level == 1)
-      color = 0x00ff00;
-    else if(this.level == 2)
-      color = 0x0000ff;
-    else if(this.level == 4)
-      color = 0x00ffff;
-    else if(this.level == 5)
-      color = 0xff00ff;
-    else if(this.level == 6)
-      color = 0xffffff;
-    else if(this.level == 7)
-      color = 0x444444;
-    else if(this.level == 8)
-      color = 0xff0088;
-    else if(this.level == 9)
-      color = 0x00ffaa;
-    else if(this.level == 10)
-      color = 0xaaffaa;
-    else if(this.level == 11)
-      color = 0x3388ff;
-    else if(this.level == 12)
-      color = 0x00aa00;
-    else if(this.level == 13)
-      color = 0x0000aa;
-    else if(this.level == 14)
-      color = 0x222222;
+    var geometry = new T.PlaneGeometry(this.size + division_size * extra, this.size + division_size * extra, this.subdiv + extra, this.subdiv + extra);
     
-    this.material = new T.MeshPhongMaterial({
-      /// shading: T.FlatShading,
-      color: 0xdddddd
-    });
-
-    var extra = 0;
-
-    var se = this.size / this.subdiv * 2;
-    
-    var geometry = new T.PlaneGeometry(this.size + se, this.size + se, this.subdiv + extra * 2, this.subdiv + extra * 2);
-    
-    // this.mesh = new T.Mesh(geometry, this.manager.material);
-    this.mesh = new T.Mesh(geometry, this.material);
+    this.mesh = new T.Mesh(geometry, this.manager.material);
 
     this.mesh.position.x = this.position.x;
     this.mesh.position.y = this.position.y;
 
-    var s = 0.001;
-
-    var noise = this.manager.noise;
-
-    function o(xy, f, a) {
-      return noise.simplex2(xy[0] * f, xy[1] * f) * a;
-    }
-
-    function f(xy) {
-      var v = 0;
-      var f = 1 / 15000;
-      var a = 1200;
-      
-      v += o(xy, f / 50, a * 20);
-      v += o(xy, f / 10, a * 5);
-      v += o(xy, f, a);
-      v += o(xy, f * 3, a * 0.4);
-      v += o(xy, f * 5, a * 0.2);
-
-      v += o(xy, f * 15, a * 0.04);
-
-      v += o(xy, f * 50, a * 0.02);
-      
-      v += o(xy, f * 150, a * 0.007);
-      v += o(xy, f * 250, a * 0.003);
-      
-      v += o(xy, f * 500, a * 0.002);
-      v += o(xy, f * 800, a * 0.002);
-      
-      return v;
-    }
-    
-    var v;
-
-    for(var i=0; i<geometry.vertices.length; i++) {
-      v = geometry.vertices[i];
-      geometry.vertices[i].z = f([v.x + this.mesh.position.x, v.y + this.mesh.position.y]);
-    }
+    this.regenerateHeight();
 
     geometry.computeFaceNormals();
     
+    var faces = geometry.faces;
+    
+    var s = 1 / 3000;
+
+    var x = this.mesh.position.x;
+    var y = this.mesh.position.y;
+    
+    var face;
+    
+    for(var i=0; i<faces.length; i++) {
+
+      face = faces[i];
+
+      var v1 = geometry.vertices[face.a];
+      var v2 = geometry.vertices[face.b];
+      var v3 = geometry.vertices[face.c];
+
+      geometry.faceVertexUvs[0].push([
+        new T.Vector2(s * (v1.x + x), s * (v1.y + y)),
+        new T.Vector2(s * (v2.x + x), s * (v2.y + y)),
+        new T.Vector2(s * (v3.x + x), s * (v3.y + y))
+      ]);
+
+      // face.vertexNormals = [
+      // face.normal,
+      // face.normal,
+      // face.normal
+      // ];
+
+    }
+
     geometry.computeVertexNormals();
     
-    var scene = this.manager.instance.scene.scene;
+    geometry.uvsNeedUpdate = true;
 
+    this.mesh.visible = !this.parent.use_subdivided;
+    
+    var scene = this.manager.getScene(this.level);
+
+    this.position.z = this.getAltitude([this.mesh.position.x, this.mesh.position.y]);
+    
     scene.add(this.mesh);
+
+    this.ready = true;
+  }
+
+  getAltitude(xy) {
+
+    var _this = this;
+    
+    function o(offset, xy, f, a) {
+      return _this.manager.noise.simplex2(offset[0] + xy[0] * f, offset[1] + xy[1] * f) * a;
+    }
+
+    var v = 0;
+    var f = 1 / 15000;
+    var a = 1200;
+    
+    v += o([100, 50], xy, f / 50, a * 100);
+    v += o([300, 200], xy, f / 10, a * 20);
+    v += o([110, 500], xy, f / 5, a * 3);
+    v += o([500, 200], xy, f * 1, a * 1.2);
+    v += o([300, 400], xy, f * 3, a * 0.5);
+    v += o([900, 800], xy, f * 5, a * 0.3);
+
+    v += o([250, 800], xy, f * 15, a * 0.2);
+
+    v += o([200, 590], xy, f * 50, a * 0.05);
+    
+    v += o([120, 380], xy, f * 150, a * 0.007);
+    v += o([300, 100], xy, f * 250, a * 0.003);
+    
+    return v;
+    
+    v += o([150, 900], xy, f * 500, a * 0.002);
+    v += o([100, 200], xy, f * 800, a * 0.002);
+    v += o([200, 300], xy, f * 1600, a * 0.001);
+      
+    return v;
+    
+  }
+
+  regenerateHeight() {
+
+    var s = 0.001;
+
+    var vxy, vsxy, z, v;
+
+    var _this = this;
+
+    for(var i=0; i<this.mesh.geometry.vertices.length; i++) {
+      v = this.mesh.geometry.vertices[i];
+
+      vxy = [v.x, v.y];
+
+      v.z = this.getAltitude([vxy[0] + this.mesh.position.x, vxy[1] + this.mesh.position.y]);
+    }
 
   }
 
@@ -229,7 +261,7 @@ class NestTile extends Tile {
   tick(elapsed) {
     if(!this.mesh) this.createMesh();
 
-    if(this.level >= 18) return;
+    if(this.level >= 17) return;
     
     this.updateDistance();
 
@@ -237,7 +269,15 @@ class NestTile extends Tile {
     
     var spacing = ((Math.sin(util.radians(scene.activeCamera().fov)) / Math.max(1, this.distance - this.size * 0.7)) * scene.size[1]) * (this.size / this.subdiv);
 
-    if(this.parent.use_subdivided && !this.use_subdivided) this.mesh.visible = true;
+    if(this.parent.use_subdivided && !this.use_subdivided) {
+      var ready = true;
+      for(var i=0; i<this.children.length; i++) {
+        if(!this.children[i].mesh) ready = false;
+      }
+
+      if(ready)
+        this.mesh.visible = true;
+    }
 
     if(spacing > 30) {
 
@@ -268,6 +308,8 @@ class TileGrid extends Tile {
 
     this.tile_ids = {};
     this.tiles = [];
+
+    this.use_subdivided = true;
   }
 
   setViewer(viewer) {
@@ -290,6 +332,12 @@ class TileGrid extends Tile {
     if(!id in this.tile_ids) return null;
     
     return this.tiles[this.tile_ids[id]];
+  }
+
+  getAltitude(position) {
+    var s = this.size;
+    var tile = this.getTile([Math.round(position[0] / s), Math.round(position[1] / s)]);
+    if(tile) return tile.getAltitude(position);
   }
 
   createTile(xy) {
@@ -368,26 +416,30 @@ class Manager extends events.Events {
 
     this.instance = instance;
 
-    this.material = new T.MeshBasicMaterial({
-      color: 0xff00ff,
-      wireframe: true
+    this.material = new T.MeshPhongMaterial({
+      shading: T.FlatShading,
+      color: 0xffccbb
     });
     
     this.view_distance = 10000 * 1000;
 
     this.viewer = new T.Vector3();
 
-    this.noise = new Noise(Math.random());
+    this.noise = new Noise(0);
 
     this.tile = new TileGrid(this);
 
     this.tile.update();
   }
 
+  getScene(level) {
+    return this.instance.scene.scene;
+  }
+
   setViewer(viewer) {
     var distance = this.viewer.distanceTo(viewer);
     
-    if(distance < 100) return;
+    if(distance < 500) return;
 
     this.viewer.copy(viewer);
 
@@ -396,6 +448,14 @@ class Manager extends events.Events {
 
   tick(elapsed) {
     this.tile.tick();
+  }
+
+  getAltitude(position) {
+    return this.tile.getAltitude(position);
+  }
+
+  render(elapsed) {
+
   }
   
 }

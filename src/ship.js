@@ -1,7 +1,8 @@
 'use strict';
 
-var C = require('cannon');
+var $ = require('jquery');
 
+var C = require('cannon');
 var T = require('three');
 
 var input = require('./input');
@@ -17,16 +18,17 @@ class Ship {
     
     this.body = new C.Body({
       mass: 5000,
-      position: new C.Vec3(0, 0, 1000),
       shape: new C.Sphere(5),
       angularDamping: 0.9
     });
+    
+    this.body.position.set(0, 0, 30000);
     
     this.world.world.addBody(this.body);
 
     this.object = new T.Object3D();
 
-    this.camera = new T.PerspectiveCamera(55, 1, 1, 10000 * 1000);
+    this.camera = new T.PerspectiveCamera(55, 1, 10, 10000 * 1000);
     this.camera.up = new T.Vector3(0, 0, 1);
     this.camera.lookAt(new T.Vector3(0, 1, 0));
 
@@ -40,6 +42,26 @@ class Ship {
       v3a: new C.Vec3(),
       v3b: new C.Vec3()
     };
+    
+    $('body').append('<ul id="info"></ul>');
+
+    var stats = {
+      'speed': 'SPD',
+      'altitude': 'ALT',
+      'agl': 'AGL'
+    };
+
+    for(var i in stats) {
+      $('#info').append('<li id="stat-' + i + '">' + stats[i] + ': <span class="value"></span></li>');
+    }
+  }
+
+  setInfo(stat, value, unit, fixed) {
+    if(fixed == 0)
+      value = Math.round(value);
+    else
+      value = value.toFixed(fixed);
+    $('#info #stat-' + stat + ' .value').text(value + unit);
   }
 
   updateInput(elapsed) {
@@ -86,6 +108,10 @@ class Ship {
     this.object.position.copy(this.body.position);
 
     this.object.quaternion.copy(this.body.quaternion);
+
+    this.setInfo('speed', this.body.velocity.length(), 'm/s');
+    this.setInfo('altitude', this.body.position.z * 0.001, 'km', 1);
+    this.setInfo('agl', this.body.position.z - this.instance.terrain.getAltitude([this.body.position.x, this.body.position.y]), 'm', 2);
   }
   
 }

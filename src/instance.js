@@ -40,6 +40,8 @@ class Instance {
 
     this.terrain.tick(this.time.elapsed);
 
+    this.terrain.render(this.time.elapsed);
+
     requestAnimationFrame(function() {
       _this.tick.call(_this);
     });

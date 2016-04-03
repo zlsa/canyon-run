@@ -1,0 +1,31 @@
+{
+  "name": "canyon-run-game",
+  "author": "Jon Ross <jonross.zlsa@gmail.com> (https://zlsa.github.io/)",
+  "description": "Fly through canyons",
+  "keywords": [
+    "game"
+  ],
+  "homepage": "https://zlsa.github.io/canyon-run/",
+  "version": "0.0.1",
+  "license": "MIT",
+  "repository": "github:zlsa/pong",
+  "main": "main.js",
+  "dependencies": {
+    "cannon": "^0.6.2",
+    "jquery": "^2.2.2",
+    "noisejs": "^2.1.0",
+    "three": "^0.75.0"
+  },
+  "devDependencies": {
+    "babel-core": "^6.7.4",
+    "babel-loader": "^6.2.4",
+    "css-loader": "^0.23.1",
+    "file-loader": "^0.8.5",
+    "image-webpack-loader": "^1.6.3",
+    "node-sass": "^3.4.2",
+    "sass-loader": "^3.2.0",
+    "style-loader": "^0.13.1",
+    "url-loader": "^0.5.7",
+    "webpack": "^1.12.14"
+  }
+}

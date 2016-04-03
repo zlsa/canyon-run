@@ -7,7 +7,6 @@ module.exports = {
   target: 'web',
   
   output: {
-    path: './dist',
     filename: 'bundle.js'
   },
 
